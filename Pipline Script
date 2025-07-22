@@ -1,0 +1,53 @@
+pipeline {
+  agent any
+
+  environment {
+    LOG_FILE = "/tmp/test.log"
+    S3_BUCKET = "log-bucket-for-backup"
+    AWS_REGION = "ap-south-1"
+    TIMESTAMP = "${new Date().format('yyyyMMdd-HHmmss')}"
+  }
+
+  stages {
+    stage('Upload to S3') {
+      steps {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+          sh '''
+            echo "Uploading $LOG_FILE to S3..."
+            aws s3 cp $LOG_FILE s3://$S3_BUCKET/${TIMESTAMP}_test.log --region $AWS_REGION
+          '''
+        }
+      }
+    }
+
+    stage('Verify Upload') {
+      steps {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+          sh '''
+            echo "Verifying uploaded log in S3..."
+            aws s3 ls s3://$S3_BUCKET/${TIMESTAMP}_test.log --region $AWS_REGION || {
+              echo " Verification failed"
+              exit 1
+            }
+          '''
+        }
+      }
+    }
+
+    stage('Clear Log File') {
+      steps {
+        echo "Clearing the original log file..."
+        sh 'truncate -s 0 $LOG_FILE'
+      }
+    }
+  }
+
+  post {
+    success {
+      echo " Pipeline completed successfully"
+    }
+    failure {
+      echo " Pipeline failed"
+    }
+  }
+}
