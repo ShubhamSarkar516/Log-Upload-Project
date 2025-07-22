@@ -1,0 +1,14 @@
+# Ignore AWS CLI install files
+awscliv2.zip
+.aws/
+
+# Log files
+*.log
+/tmp/*.log
+/var/log/monitor_log_size.log
+
+# OS & editor junk
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
